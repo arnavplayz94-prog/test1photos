@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Album - Full Version</title>
+<style>
+body { font-family: 'Comic Sans MS', cursive, sans-serif; margin:0; padding:20px; background: linear-gradient(to right,#fceabb,#f8b500); display:flex; flex-direction:column; align-items:center; }
+h1{ text-align:center; color:#ff6f61; font-size:2em; margin-bottom:20px; text-shadow:1px 1px #fff; }
+#landing { display:flex; flex-direction:column; align-items:center; width:100%; }
+#landing input, #landing button { padding:12px 18px; margin:5px; border-radius:10px; border:2px solid #ff6f61; font-size:1em; }
+button { background:#ff6f61; color:#fff; transition:0.3s; cursor:pointer; }
+button:hover{ background:#ff3b2e; }
+#album { display:flex; flex-direction:column; align-items:center; width:100%; position:relative; }
+/* Family code display */
+#familyCodeDisplay { position:absolute; top:10px; left:10px; background:#fff; padding:8px 12px; border-radius:8px; box-shadow:0 3px 6px rgba(0,0,0,0.2); font-weight:bold; color:#ff6f61; z-index:1000; }
+/* Log out button */
+#logoutBtn { position:absolute; top:10px; right:10px; padding:8px 12px; border:none; border-radius:8px; background:#ff3b2e; color:white; cursor:pointer; font-weight:bold; z-index:1000; }
+/* Search bar */
+#searchInput { padding:10px; margin-bottom:10px; width:90%; max-width:400px; border-radius:8px; border:2px solid #ff6f61; }
+/* Folder form */
+#folderForm { margin-bottom:15px; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:100%; max-width:400px; }
+#folderForm input { flex:1; min-width:150px; }
+#folderList { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:15px; width:100%; max-width:1000px; }
+.folder { background:#fff; border-radius:12px; padding:10px; box-shadow:0 5px 10px rgba(0,0,0,0.2); display:flex; flex-direction:column; position:relative; }
+.folder h2 { text-align:center; color:#ff6f61; margin:5px 0; font-size:1.1em; }
+.photoCount { position:absolute; top:5px; right:5px; background:#3b99ff; color:#fff; border-radius:50%; width:25px; height:25px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9em; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
+.folder input[type=file] { margin-top:5px; }
+.folder button.downloadFolderBtn { margin:5px auto 0 auto; padding:6px 10px; background:#3b99ff; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+.folder button.downloadFolderBtn:hover { background:#0066cc; }
+.photos { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-top:5px; }
+.photos img { width:70px; height:70px; object-fit:cover; border-radius:8px; cursor:pointer; transition:0.2s; border: 2px solid transparent; }
+.photos img.favorite { border-color: gold; }
+#lightboxOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); justify-content:center; align-items:center; z-index:999; flex-direction:column; }
+#lightboxOverlay img { max-width:90%; max-height:70%; border-radius:10px; box-shadow:0 0 20px #000; margin-bottom:10px; }
+#lightboxControls { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+#lightboxControls button { padding:12px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1em; }
+#lightboxDownload { background:#3b99ff; color:white; }
+#lightboxDownload:hover{ background:#0066cc; }
+#lightboxDelete { background:#ff3b2e; color:white; }
+#lightboxDelete:hover{ background:#ff0000; }
+#lightboxFavorite { background:gold; color:black; }
+#lightboxFavorite:hover{ background:orange; }
+#lightboxComment { padding:6px; border-radius:6px; border:none; width:200px; font-size:1em; margin-top:5px; }
+#lightboxSlideshow { background:#3b99ff; color:white; }
+@media(max-width:600px){ .photos img{ width:60px; height:60px; } #folderForm { flex-direction:column; align-items:center; } #folderForm input { width:80%; } }
+</style>
+
+<!-- JSZip & FileSaver -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.11.0/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+
+<h1>👨‍👩‍👧‍👦 Family Album</h1>
+
+<div id="landing">
+  <button id="newFamilyBtn">Make New Family Code</button>
+  <input type="text" id="familyCodeInput" placeholder="Enter Family Code">
+  <button id="joinFamilyBtn">Enter Old Family Code</button>
+</div>
+
+<div id="album" style="display:none;">
+  <div id="familyCodeDisplay">Family Code: <span id="familyCodeText">---</span></div>
+  <button id="logoutBtn">Log Out</button>
+
+  <input type="text" id="searchInput" placeholder="Search folders...">
+
+  <div id="folderForm">
+    <input type="text" id="folderName" placeholder="Enter folder/event name">
+    <button id="createFolderBtn">Create Folder</button>
+  </div>
+  <div id="folderList"></div>
+</div>
+
+<div id="lightboxOverlay">
+  <img src="" alt="Photo">
+  <input type="text" id="lightboxComment" placeholder="Add a comment">
+  <div id="lightboxControls">
+    <button id="lightboxDownload">⬇ Download</button>
+    <button id="lightboxDelete">× Delete</button>
+    <button id="lightboxFavorite">★ Favorite</button>
+    <button id="lightboxSlideshow">▶ Play Slideshow</button>
+  </div>
+</div>
+
+<script>
+const landingDiv=document.getElementById('landing');
+const albumDiv=document.getElementById('album');
+const newFamilyBtn=document.getElementById('newFamilyBtn');
+const joinFamilyBtn=document.getElementById('joinFamilyBtn');
+const familyCodeInput=document.getElementById('familyCodeInput');
+const folderList=document.getElementById('folderList');
+const createFolderBtn=document.getElementById('createFolderBtn');
+const folderNameInput=document.getElementById('folderName');
+const familyCodeText=document.getElementById('familyCodeText');
+const logoutBtn=document.getElementById('logoutBtn');
+const searchInput=document.getElementById('searchInput');
+
+const lightbox=document.getElementById('lightboxOverlay');
+const lightboxImg=lightbox.querySelector('img');
+const lightboxDownload=document.getElementById('lightboxDownload');
+const lightboxDelete=document.getElementById('lightboxDelete');
+const lightboxFavorite=document.getElementById('lightboxFavorite');
+const lightboxComment=document.getElementById('lightboxComment');
+const lightboxSlideshow=document.getElementById('lightboxSlideshow');
+
+let currentFamily=null;
+let folders={};
+let currentLightbox={folder:'', index:0};
+let slideshowInterval=null;
+
+function generateCode(length=6){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code='';
+  for(let i=0;i<length;i++) code+=chars.charAt(Math.floor(Math.random()*chars.length));
+  return code;
+}
+function saveFolders(){ localStorage.setItem('family_'+currentFamily, JSON.stringify(folders)); }
+function loadFolders(){ folders=JSON.parse(localStorage.getItem('family_'+currentFamily)||'{}'); }
+
+function showAlbum(){
+  landingDiv.style.display='none';
+  albumDiv.style.display='flex';
+  loadFolders();
+  renderFolders();
+  familyCodeText.textContent=currentFamily;
+  localStorage.setItem('currentFamily', currentFamily);
+}
+
+function renderFolders(){
+  folderList.innerHTML='';
+  for(const name in folders){
+    const folderDiv=document.createElement('div'); 
+    folderDiv.className='folder';
+    folderDiv.innerHTML=`
+      <h2>${name}</h2>
+      <div class="photoCount">${folders[name].length}</div>
+      <button class="downloadFolderBtn">Download Folder</button>
+      <input type="file" multiple accept="image/*" class="photoInput">
+      <div class="photos" id="photos-${name}"></div>`;
+    folderList.appendChild(folderDiv);
+    const container=document.getElementById('photos-'+name);
+    folders[name].forEach((photo,index)=>{
+      const img=document.createElement('img'); 
+      img.src=photo.url; 
+      if(photo.favorite) img.classList.add('favorite');
+      if(photo.comment) img.title = photo.comment;
+      container.appendChild(img);
+      img.addEventListener('click',()=>{
+        lightboxImg.src=photo.url;
+        lightboxComment.value = photo.comment || '';
+        currentLightbox={folder:name,index:index};
+        lightbox.style.display='flex';
+      });
+    });
+    folderDiv.querySelector('.photoInput').addEventListener('change',function(e){
+      Array.from(e.target.files).forEach(file=>{
+        const reader=new FileReader();
+        reader.onload=function(ev){ 
+          folders[name].push({url:ev.target.result,favorite:false,comment:""}); 
+          saveFolders(); renderFolders(); 
+        }
+        reader.readAsDataURL(file);
+      });
+    });
+    folderDiv.querySelector('.downloadFolderBtn').addEventListener('click', ()=>{
+      if(folders[name].length===0){ alert('Folder is empty!'); return; }
+      const zip = new JSZip();
+      folders[name].forEach((photo,index)=>{
+        const arr = photo.url.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--) u8arr[n] = bstr.charCodeAt(n);
+        zip.file(`${name}-photo${index+1}.${mime.split('/')[1]}`, u8arr);
+      });
+      zip.generateAsync({type:"blob"}).then(content=>{ saveAs(content, `${name}.zip`); });
+    });
+  }
+}
+
+// Family buttons
+newFamilyBtn.addEventListener('click',()=>{
+  const code=generateCode();
+  localStorage.setItem('family_'+code, JSON.stringify({}));
+  currentFamily=code; folders={};
+  alert(`Your family code: ${code}`);
+  showAlbum();
+});
+joinFamilyBtn.addEventListener('click',()=>{
+  const code=familyCodeInput.value.trim().toUpperCase();
+  if(!localStorage.getItem('family_'+code)) return alert('Family code not found!');
+  currentFamily=code; showAlbum();
+});
+
+// Create folder
+createFolderBtn.addEventListener('click',()=>{
+  const name=folderNameInput.value.trim();
+  if(!name) return alert('Enter folder name!');
+  if(folders[name]) return alert('Folder exists!');
+  folders[name]=[]; saveFolders(); folderNameInput.value=''; renderFolders();
+});
+
+// Lightbox actions
+lightboxDownload.addEventListener('click',()=>{
+  const photo=folders[currentLightbox.folder][currentLightbox.index];
+  const a=document.createElement('a'); a.href=photo.url; a.download=`${currentLightbox.folder}-photo${currentLightbox.index+1}.png`; a.click();
+});
+lightboxDelete.addEventListener('click',()=>{
+  if(confirm('Delete this photo?')){
+    folders[currentLightbox.folder].splice(currentLightbox.index,1); saveFolders(); renderFolders(); lightbox.style.display='none';
+  }
+});
+lightboxFavorite.addEventListener('click',()=>{
+  const photo=folders[currentLightbox.folder][currentLightbox.index];
+  photo.favorite = !photo.favorite; saveFolders(); renderFolders();
+});
+lightboxComment.addEventListener('input',()=>{
+  const photo=folders[currentLightbox.folder][currentLightbox.index];
+  photo.comment=lightboxComment.value; saveFolders(); renderFolders();
+});
+
+// Slideshow
+lightboxSlideshow.addEventListener('click',()=>{
+  const photos=folders[currentLightbox.folder];
+  if(slideshowInterval){
+    clearInterval(slideshowInterval); slideshowInterval=null; lightboxSlideshow.textContent='▶ Play Slideshow';
+  } else {
+    let idx=currentLightbox.index;
+    slideshowInterval=setInterval(()=>{
+      idx = (idx+1)%photos.length;
+      currentLightbox.index = idx;
+      lightboxImg.src = photos[idx].url;
+      lightboxComment.value = photos[idx].comment || '';
+    },2000);
+    lightboxSlideshow.textContent='⏸ Pause Slideshow';
+  }
+});
+
+lightbox.addEventListener('click',e=>{ if(e.target===lightbox) lightbox.style.display='none'; });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') lightbox.style.display='none'; });
+
+// Logout
+logoutBtn.addEventListener('click',()=>{
+  if(confirm('Are you sure you want to log out?')){
+    localStorage.removeItem('currentFamily');
+    currentFamily=null; folders={};
+    albumDiv.style.display='none';
+    landingDiv.style.display='flex';
+  }
+});
+
+// Search folders
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.toLowerCase();
+  const folderDivs = folderList.getElementsByClassName('folder');
+  Array.from(folderDivs).forEach(div => {
+    const folderName = div.querySelector('h2').textContent.toLowerCase();
+    div.style.display = folderName.includes(query) ? 'flex' : 'none';
+  });
+});
+
+// On load, check last family
+window.addEventListener('load',()=>{
+  const savedFamily = localStorage.getItem('currentFamily');
+  if(savedFamily && localStorage.getItem('family_' + savedFamily)){
+    currentFamily = savedFamily;
+    showAlbum();
+  }
+});
+</script>
+</body>
+</html>
